@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NFL DFS First Look</title>
+<style>
+  :root {
+    --navy: #1a2744;
+    --red: #c8102e;
+    --accent: #7fcf8f;
+    --bg: #fafafa;
+    --border: #e2e2e2;
+    --row-alt: #eef1f7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    margin: 0;
+    background: var(--bg);
+    color: #1a1a1a;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .shell {
+    max-width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .header {
+    background: var(--navy);
+    color: #fff;
+    padding: 14px 20px;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 3px solid var(--accent);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .last-updated { font-size: 11px; font-weight: 400; opacity: 0.75; letter-spacing: normal; }
+  .theme-toggle {
+    margin-left: auto;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    border-radius: 6px;
+    padding: 5px 9px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .tabs {
+    display: flex;
+    overflow-x: auto;
+    background: #eceef2;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    color: #555;
+    white-space: nowrap;
+  }
+  .tab-btn.active { color: var(--navy); border-bottom-color: var(--red); background: #fff; }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 14px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+  }
+  #search, #teamFilter {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .col-toggle-btn, .col-panel-actions button {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .col-panel {
+    display: none;
+    position: absolute;
+    z-index: 10;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    max-height: 320px;
+    overflow-y: auto;
+    min-width: 200px;
+  }
+  .col-panel.open { display: block; }
+  .col-panel label { display: block; font-size: 12px; padding: 3px 0; cursor: pointer; }
+  .col-panel-actions { display: flex; gap: 6px; margin-bottom: 8px; }
+  .table-wrap { overflow-x: auto; max-height: 640px; overflow-y: auto; position: relative; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  thead th {
+    position: sticky;
+    top: 0;
+    background: var(--navy);
+    z-index: 2;
+    padding: 8px 8px;
+    text-align: center;
+    border-bottom: 3px solid var(--accent);
+    cursor: pointer;
+    user-select: none;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.4px;
+  }
+  thead th:first-child { text-align: left; position: sticky; left: 0; z-index: 3; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+  .arrow { font-size: 10px; color: var(--red); margin-left: 3px; }
+  tbody td {
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    white-space: nowrap;
+  }
+  tbody td:first-child { text-align: left; font-weight: 600; position: sticky; left: 0; background: inherit; z-index: 1; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+  tbody tr:nth-child(even) { background: var(--row-alt); }
+  tbody tr:nth-child(even) td:first-child { background: var(--row-alt); }
+  tbody tr:hover td { filter: brightness(0.96); transition: filter 0.12s ease; }
+  .glossary-wrap { padding: 20px; }
+  .glossary-section { margin-bottom: 20px; }
+  .glossary-section h3 { color: var(--navy); border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
+  .glossary-section dl { margin: 0; display: grid; grid-template-columns: 180px 1fr; row-gap: 8px; column-gap: 16px; }
+  .glossary-section dt { font-weight: 700; font-size: 13px; color: #1a1a1a; }
+  .glossary-section dd { margin: 0; font-size: 13px; color: #444; line-height: 1.4; }
+
+  /* ---------- Dark mode ---------- */
+  body.dark { background: #10141f; color: #e4e6ec; }
+  body.dark .toolbar, body.dark .table-wrap, body.dark .glossary-wrap,
+  body.dark .tab-btn, body.dark #search, body.dark #teamFilter,
+  body.dark .col-toggle-btn, body.dark .col-panel {
+    background: #1a2030;
+    border-color: #2c3448;
+    color: #e4e6ec;
+  }
+  body.dark .tab-btn.active { background: var(--navy); color: #fff; }
+  body.dark tbody tr { background: #1a2030; }
+  body.dark tbody tr:nth-child(even), body.dark tbody tr:nth-child(even) td:first-child { background: #212a3d; }
+  body.dark tbody td { border-bottom-color: #2c3448; color: #e4e6ec; }
+  body.dark tbody tr:hover td { filter: brightness(1.15); }
+  body.dark .col-panel label { color: #e4e6ec; }
+  body.dark .col-panel-actions button { background: #2c3448; border-color: #3a4460; color: #e4e6ec; }
+  body.dark .glossary-section dt { color: #e4e6ec; }
+  body.dark .glossary-section dd { color: #b6bcca; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="header">
+    <span>🏈 NFL DFS FIRST LOOK</span>
+    <span id="lastUpdated" class="last-updated"></span>
+    <button id="themeToggle" class="theme-toggle" title="Toggle dark mode">🌙</button>
+  </div>
+  <div class="tabs" id="tabs">
+    <button class="tab-btn active" data-tab="odds">Odds & Schedule</button>
+    <button class="tab-btn" data-tab="teamTotals">Team Totals</button>
+    <button class="tab-btn" data-tab="offDef">Off vs Def</button>
+    <button class="tab-btn" data-tab="qb">QB</button>
+    <button class="tab-btn" data-tab="rb">RB</button>
+    <button class="tab-btn" data-tab="wr">WR</button>
+    <button class="tab-btn" data-tab="te">TE</button>
+    <button class="tab-btn" data-tab="dlineOline">D-Line/O-Line</button>
+    <button class="tab-btn" data-tab="glossary">Glossary</button>
+  </div>
+  <div class="toolbar" id="toolbar">
+    <input type="text" id="search" placeholder="Search name or team...">
+    <select id="teamFilter"><option value="">All Teams</option></select>
+    <div style="position:relative;">
+      <button class="col-toggle-btn" id="colToggleBtn">Columns ▾</button>
+      <div class="col-panel" id="colPanel">
+        <div class="col-panel-actions">
+          <button id="showAllBtn">Show All</button>
+          <button id="hideMostBtn">Hide Most</button>
+        </div>
+        <div id="colList"></div>
+      </div>
+    </div>
+  </div>
+  <div class="table-wrap" id="tableWrap">
+    <table id="dataTable">
+      <thead><tr id="headRow"></tr></thead>
+      <tbody id="bodyRows"></tbody>
+    </table>
+  </div>
+  <div class="glossary-wrap" id="glossaryWrap" style="display:none;">
+    <div class="glossary-section">
+      <h3>Odds & Schedule</h3>
+      <dl>
+        <dt>R-Total / H-Total</dt><dd>Implied point total for the road / home team, derived from the spread and game total.</dd>
+        <dt>Favorite / Spread</dt><dd>The favored team and the size of the spread.</dd>
+        <dt>Total</dt><dd>The combined implied game total (over/under).</dd>
+      </dl>
+    </div>
+    <div class="glossary-section">
+      <h3>Team Totals & Matchup Chart</h3>
+      <dl>
+        <dt>t EPA / t PFF</dt><dd>Total defensive EPA / PFF grade allowed by the opponent.</dd>
+        <dt>p EPA / p PFF</dt><dd>Opponent's EPA / PFF grade against the pass.</dd>
+        <dt>r EPA / r PFF</dt><dd>Opponent's EPA / PFF grade against the run.</dd>
+        <dt>DvP</dt><dd>Defense vs. Position rank — how favorable the matchup is for that position group. Blue/green = favorable matchup for the offense.</dd>
+      </dl>
+    </div>
+    <div class="glossary-section">
+      <h3>Offense vs Defense — Rush/Pass Potential</h3>
+      <dl>
+        <dt>p PFF / p EPA</dt><dd>The offense's own PFF grade / EPA passing.</dd>
+        <dt>r PFF / r EPA</dt><dd>The offense's own PFF grade / EPA rushing.</dd>
+        <dt>P-POT / R-POT</dt><dd>Passing / rushing potential rank for this matchup — how favorable the matchup is for that phase of the offense.</dd>
+      </dl>
+    </div>
+    <div class="glossary-section">
+      <h3>QB</h3>
+      <dl>
+        <dt>PaY/G, PaT/G</dt><dd>Passing yards / touchdowns per game.</dd>
+        <dt>RuY/G, RuT/G</dt><dd>Rushing yards / touchdowns per game.</dd>
+        <dt>Int/G</dt><dd>Interceptions per game.</dd>
+        <dt>CPOE</dt><dd>Completion percentage over expectation.</dd>
+        <dt>aDOT</dt><dd>Average depth of target.</dd>
+        <dt>FPPG</dt><dd>Fantasy points per game.</dd>
+      </dl>
+    </div>
+    <div class="glossary-section">
+      <h3>RB / WR / TE (shared stats)</h3>
+      <dl>
+        <dt>Snap%</dt><dd>Percentage of offensive snaps played.</dd>
+        <dt>Att/G, Tar/G, Rec/G</dt><dd>Rushing attempts, targets, and receptions per game.</dd>
+        <dt>Tar %, AY %</dt><dd>Share of the team's total targets / air yards.</dd>
+        <dt>Rte %</dt><dd>Percentage of routes run relative to total team drop-backs.</dd>
+        <dt>1READ</dt><dd>Percentage of targets where the player was the QB's first read.</dd>
+        <dt>xFPPG / Diff</dt><dd>Expected fantasy points per game, and the gap between actual and expected production.</dd>
+        <dt>Wide % / Slot %</dt><dd>How often a receiver lines up outside vs. in the slot.</dd>
+      </dl>
+    </div>
+    <div class="glossary-section">
+      <h3>D-Line vs O-Line</h3>
+      <dl>
+        <dt>Press / PrROE</dt><dd>Pressure rate on the QB, and pressure rate over expectation.</dd>
+        <dt>PFF</dt><dd>PFF's pass-rush grade for the defense.</dd>
+        <dt>O Press / O PrROE / O PFF</dt><dd>Same metrics for the opposing offensive line (how well they protect).</dd>
+        <dt>C Press</dt><dd>Combined pressure rate — defensive line's pressure rate blended with the opposing O-line's tendency to allow pressure.</dd>
+        <dt>Sack Pot</dt><dd>Sack potential rank for this matchup.</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<script>
+const STOPS = [
+  [0, [178,24,43]], [1/6, [239,138,98]], [2/6, [253,219,199]],
+  [3/6, [247,247,247]], [4/6, [209,229,240]], [5/6, [103,169,207]], [1, [33,102,172]]
+];
+function lerp(a,b,t){ return a+(b-a)*t; }
+function gradientColor(p) {
+  p = Math.max(0, Math.min(1, p));
+  let lo = STOPS[0], hi = STOPS[STOPS.length-1];
+  for (let i=0;i<STOPS.length-1;i++){
+    if (p>=STOPS[i][0] && p<=STOPS[i+1][0]) { lo=STOPS[i]; hi=STOPS[i+1]; break; }
+  }
+  const range = hi[0]-lo[0] || 1;
+  const t = (p-lo[0])/range;
+  const r = Math.round(lerp(lo[1][0],hi[1][0],t));
+  const g = Math.round(lerp(lo[1][1],hi[1][1],t));
+  const b = Math.round(lerp(lo[1][2],hi[1][2],t));
+  const lum = 0.299*r+0.587*g+0.114*b;
+  return { bg: `rgb(${r},${g},${b})`, text: lum > 150 ? "black" : "white" };
+}
+
+// Ranks ascending by raw value; ties always get the same percentile.
+function computeAutoPercentiles(rows, cols) {
+  cols.filter(c => c.auto).forEach(col => {
+    const withIdx = rows.map((r, i) => [i, r[col.key]]).filter(([, v]) => v !== null && v !== undefined);
+    const n = withIdx.length;
+    if (n === 0) return;
+    withIdx.sort((a, b) => a[1] - b[1]);
+    let i = 0;
+    while (i < n) {
+      let j = i;
+      while (j + 1 < n && withIdx[j + 1][1] === withIdx[i][1]) j++;
+      const avgPosition = (i + j) / 2;
+      const p = n > 1
+        ? (col.invert ? (n - 1 - avgPosition) / (n - 1) : avgPosition / (n - 1))
+        : 0.5;
+      for (let k = i; k <= j; k++) rows[withIdx[k][0]][col.pct] = p;
+      i = j + 1;
+    }
+  });
+}
+
+let DATA = { odds: [], teamTotals: [], dlineOline: [], offDef: [], qb: [], rb: [], wr: [], te: [] };
+let activeTab = "odds";
+let sortKey = null;
+let sortDir = 1;
+let teamFilter = "";
+let searchTerm = "";
+let hiddenCols = { odds: new Set(), teamTotals: new Set(), dlineOline: new Set(), offDef: new Set(), qb: new Set(), rb: new Set(), wr: new Set(), te: new Set() };
+
+const COLUMNS = {
+  odds: [
+    { key: "awayTeam", label: "Road Team" },
+    { key: "awayTotal", label: "R-Total", dec: 1 },
+    { key: "homeTeam", label: "Home Team" },
+    { key: "homeTotal", label: "H-Total", dec: 1 },
+    { key: "favorite", label: "Favorite" },
+    { key: "spread", label: "Spread", dec: 1 },
+    { key: "total", label: "Total", dec: 1 },
+    { key: "date", label: "Date" },
+    { key: "time", label: "Time (ET)" },
+    { key: "slate", label: "Slate" }
+  ],
+  teamTotals: [
+    { key: "offense", label: "Offense", shortTeam: true },
+    { key: "spread", label: "Spread", dec: 1 },
+    { key: "total", label: "Total", pct: "total_pct", auto: true, dec: 1 },
+    { key: "matchup", label: "Matchup" },
+    { key: "tEpa", label: "t EPA", pct: "tEpa_pct", auto: true },
+    { key: "tPff", label: "t PFF", pct: "tPff_pct", auto: true },
+    { key: "pEpa", label: "p EPA", pct: "pEpa_pct", auto: true },
+    { key: "pPff", label: "p PFF", pct: "pPff_pct", auto: true },
+    { key: "rEpa", label: "r EPA", pct: "rEpa_pct", auto: true },
+    { key: "rPff", label: "r PFF", pct: "rPff_pct", auto: true },
+    { key: "qbDvp", label: "QB DvP", pct: "qbDvp_pct", auto: true },
+    { key: "rbDvp", label: "RB DvP", pct: "rbDvp_pct", auto: true },
+    { key: "wrDvp", label: "WR DvP", pct: "wrDvp_pct", auto: true },
+    { key: "teDvp", label: "TE DvP", pct: "teDvp_pct", auto: true },
+    { key: "time", label: "Time (ET)" },
+    { key: "slate", label: "Slate" }
+  ],
+  dlineOline: [
+    { key: "defense", label: "Defense" },
+    { key: "spread", label: "Spread", dec: 1 },
+    { key: "press", label: "Press", fmt: "pct", pct: "press_pct", auto: true, dec: 1 },
+    { key: "prroe", label: "PrROE", pct: "prroe_pct", auto: true, dec: 1 },
+    { key: "pff", label: "PFF", pct: "pff_pct", auto: true },
+    { key: "matchup", label: "Matchup" },
+    { key: "oppTotal", label: "Opp Total", pct: "oppTotal_pct", auto: true, dec: 1 },
+    { key: "oPress", label: "O Press", fmt: "pct", pct: "oPress_pct", auto: true, dec: 1 },
+    { key: "oPrroe", label: "O PrROE", pct: "oPrroe_pct", auto: true, dec: 1 },
+    { key: "oPff", label: "O PFF", pct: "oPff_pct", auto: true },
+    { key: "cPress", label: "C Press", fmt: "pct", pct: "cPress_pct", auto: true, dec: 1 },
+    { key: "sackPot", label: "Sack Pot", pct: "sackPot_pct", auto: true },
+    { key: "time", label: "Time (ET)" },
+    { key: "slate", label: "Slate" }
+  ],
+  offDef: [
+    { key: "offense", label: "Offense" },
+    { key: "spread", label: "Spread", dec: 1 },
+    { key: "total", label: "Total", pct: "total_pct", auto: true, dec: 1 },
+    { key: "pPff", label: "p PFF", pct: "pPff_pct", auto: true },
+    { key: "pEpa", label: "p EPA", pct: "pEpa_pct", auto: true },
+    { key: "rPff", label: "r PFF", pct: "rPff_pct", auto: true },
+    { key: "rEpa", label: "r EPA", pct: "rEpa_pct", auto: true },
+    { key: "matchup", label: "Matchup" },
+    { key: "oppPpff", label: "p PFF", pct: "oppPpff_pct", auto: true },
+    { key: "oppPepa", label: "p EPA", pct: "oppPepa_pct", auto: true },
+    { key: "oppRpff", label: "r PFF", pct: "oppRpff_pct", auto: true },
+    { key: "oppRepa", label: "r EPA", pct: "oppRepa_pct", auto: true },
+    { key: "pPot", label: "P-POT", pct: "pPot_pct", auto: true },
+    { key: "rPot", label: "R-POT", pct: "rPot_pct", auto: true },
+    { key: "time", label: "Time (ET)" },
+    { key: "slate", label: "Slate" }
+  ],
+  qb: [
+    { key: "name", label: "Player", link: true },
+    { key: "team", label: "Team" },
+    { key: "spread", label: "Spread", dec: 1 },
+    { key: "total", label: "Total", pct: "total_pct", auto: true, dec: 1 },
+    { key: "dk", label: "DraftKings", fmt: "money" },
+    { key: "fd", label: "FanDuel", fmt: "money" },
+    { key: "payg", label: "PaY/G", pct: "payg_pct", auto: true },
+    { key: "patg", label: "PaT/G", pct: "patg_pct", auto: true, dec: 1 },
+    { key: "ruyg", label: "RuY/G", pct: "ruyg_pct", auto: true },
+    { key: "rutg", label: "RuT/G", pct: "rutg_pct", auto: true, dec: 1 },
+    { key: "intg", label: "Int/G", pct: "intg_pct", auto: true, invert: true, dec: 1 },
+    { key: "cpoe", label: "CPOE", pct: "cpoe_pct", auto: true, dec: 1 },
+    { key: "adot", label: "aDOT", pct: "adot_pct", auto: true, dec: 1 },
+    { key: "fppg", label: "FPPG", pct: "fppg_pct", auto: true, dec: 1 },
+    { key: "matchup", label: "Matchup" },
+    { key: "pPff", label: "p PFF", pct: "pPff_pct", auto: true },
+    { key: "pEpa", label: "P EPA", pct: "pEpa_pct", auto: true },
+    { key: "dvp", label: "DvP", pct: "dvp_pct", auto: true },
+    { key: "time", label: "Time (ET)" },
+    { key: "slate", label: "Slate" }
+  ],
+  rb: [
+    { key: "name", label: "Player", link: true },
+    { key: "team", label: "Team" },
+    { key: "spread", label: "Spread", dec: 1 },
+    { key: "total", label: "Total", pct: "total_pct", auto: true, dec: 1 },
+    { key: "dk", label: "DraftKings", fmt: "money" },
+    { key: "fd", label: "FanDuel", fmt: "money" },
+    { key: "snap", label: "Snap%", fmt: "pct", pct: "snap_pct", auto: true },
+    { key: "attg", label: "Att/G", pct: "attg_pct", auto: true, dec: 1 },
+    { key: "ruyg", label: "RuY/G", pct: "ruyg_pct", auto: true, dec: 1 },
+    { key: "targ", label: "Tar/G", pct: "targ_pct", auto: true, dec: 1 },
+    { key: "reyg", label: "ReY/G", pct: "reyg_pct", auto: true, dec: 1 },
+    { key: "oppsg", label: "Opps/G", pct: "oppsg_pct", auto: true, dec: 1 },
+    { key: "tarpct", label: "Tar %", fmt: "pct", pct: "tarpct_pct", auto: true },
+    { key: "rtepct", label: "Rte %", fmt: "pct", pct: "rtepct_pct", auto: true },
+    { key: "fppg", label: "FPPG", pct: "fppg_pct", auto: true, dec: 1 },
+    { key: "xfppg", label: "xFPPG", pct: "xfppg_pct", auto: true, dec: 1 },
+    { key: "diff", label: "Diff", pct: "diff_pct", auto: true, dec: 1 },
+    { key: "matchup", label: "Matchup" },
+    { key: "pff", label: "PFF", pct: "pff_pct", auto: true },
+    { key: "epa", label: "EPA", pct: "epa_pct", auto: true },
+    { key: "dvp", label: "DVP", pct: "dvp_pct", auto: true },
+    { key: "time", label: "Time (ET)" },
+    { key: "slate", label: "Slate" }
+  ],
+  wr: [
+    { key: "name", label: "Player", link: true },
+    { key: "team", label: "Team" },
+    { key: "spread", label: "Spread", dec: 1 },
+    { key: "total", label: "Total", pct: "total_pct", auto: true, dec: 1 },
+    { key: "dk", label: "DraftKings", fmt: "money" },
+    { key: "fd", label: "FanDuel", fmt: "money" },
+    { key: "widepct", label: "Wide %", fmt: "pct", pct: "widepct_pct", auto: true },
+    { key: "slotpct", label: "Slot %", fmt: "pct", pct: "slotpct_pct", auto: true },
+    { key: "targ", label: "Tar/G", pct: "targ_pct", auto: true, dec: 1 },
+    { key: "recg", label: "Rec/G", pct: "recg_pct", auto: true, dec: 1 },
+    { key: "yarg", label: "Yar/G", pct: "yarg_pct", auto: true, dec: 1 },
+    { key: "tarpct", label: "Tar %", fmt: "pct", pct: "tarpct_pct", auto: true },
+    { key: "aypct", label: "AY %", fmt: "pct", pct: "aypct_pct", auto: true },
+    { key: "rtepct", label: "Rte %", fmt: "pct", pct: "rtepct_pct", auto: true },
+    { key: "adot", label: "aDOT", pct: "adot_pct", auto: true, dec: 1 },
+    { key: "read1", label: "1READ", fmt: "pct", pct: "read1_pct", auto: true },
+    { key: "fppg", label: "FPPG", pct: "fppg_pct", auto: true, dec: 1 },
+    { key: "xfppg", label: "xFPPG", pct: "xfppg_pct", auto: true, dec: 1 },
+    { key: "diff", label: "Diff", pct: "diff_pct", auto: true, dec: 1 },
+    { key: "matchup", label: "Matchup" },
+    { key: "epa", label: "EPA", pct: "epa_pct", auto: true },
+    { key: "dvp", label: "DVP", pct: "dvp_pct", auto: true },
+    { key: "time", label: "Time (ET)" },
+    { key: "slate", label: "Slate" }
+  ],
+  te: [
+    { key: "name", label: "Player", link: true },
+    { key: "team", label: "Team" },
+    { key: "spread", label: "Spread", dec: 1 },
+    { key: "total", label: "Total", pct: "total_pct", auto: true, dec: 1 },
+    { key: "dk", label: "DraftKings", fmt: "money" },
+    { key: "fd", label: "FanDuel", fmt: "money" },
+    { key: "targ", label: "Tar/G", pct: "targ_pct", auto: true, dec: 1 },
+    { key: "recg", label: "Rec/G", pct: "recg_pct", auto: true, dec: 1 },
+    { key: "yarg", label: "Yar/G", pct: "yarg_pct", auto: true, dec: 1 },
+    { key: "tarpct", label: "Tar %", fmt: "pct", pct: "tarpct_pct", auto: true },
+    { key: "airpct", label: "Air %", fmt: "pct", pct: "airpct_pct", auto: true },
+    { key: "rtepct", label: "Rte %", fmt: "pct", pct: "rtepct_pct", auto: true },
+    { key: "adot", label: "aDOT", pct: "adot_pct", auto: true, dec: 1 },
+    { key: "read1", label: "1READ", fmt: "pct", pct: "read1_pct", auto: true },
+    { key: "fppg", label: "FPPG", pct: "fppg_pct", auto: true, dec: 1 },
+    { key: "xfppg", label: "xFPPG", pct: "xfppg_pct", auto: true, dec: 1 },
+    { key: "diff", label: "Diff", pct: "diff_pct", auto: true, dec: 1 },
+    { key: "matchup", label: "Matchup" },
+    { key: "epa", label: "EPA", pct: "epa_pct", auto: true },
+    { key: "dvp", label: "DVP", pct: "dvp_pct", auto: true },
+    { key: "time", label: "Time (ET)" },
+    { key: "slate", label: "Slate" }
+  ]
+};
+
+function normName(s) {
+  return (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function fmt(val, type, dec, shortTeam) {
+  if (val === null || val === undefined || val === "") return "—";
+  if (shortTeam) return String(val).trim().split(" ").pop();
+  if (type === "money") return "$" + Number(val).toLocaleString();
+  if (type === "pct") return val + "%";
+  if (dec !== undefined && dec !== null) return Number(val).toFixed(dec);
+  return val;
+}
+
+function render() {
+  const cols = COLUMNS[activeTab].filter(c => !hiddenCols[activeTab].has(c.key));
+  const headRow = document.getElementById("headRow");
+  headRow.innerHTML = "";
+  cols.forEach(col => {
+    const th = document.createElement("th");
+    th.textContent = col.label;
+    if (sortKey === col.key) {
+      const arrow = document.createElement("span");
+      arrow.className = "arrow";
+      arrow.textContent = sortDir === 1 ? "▲" : "▼";
+      th.appendChild(arrow);
+    }
+    th.addEventListener("click", () => {
+      if (sortKey === col.key) sortDir *= -1; else { sortKey = col.key; sortDir = 1; }
+      render();
+    });
+    headRow.appendChild(th);
+  });
+
+  let rows = DATA[activeTab].slice();
+  if (teamFilter) rows = rows.filter(r => (r.team || r.offense || r.defense || r.homeTeam || r.awayTeam || "").includes(teamFilter));
+  if (searchTerm) {
+    const t = searchTerm.toLowerCase();
+    rows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(t));
+  }
+  if (sortKey) {
+    rows.sort((a, b) => {
+      let av = a[sortKey], bv = b[sortKey];
+      if (av === null || av === undefined) av = -Infinity;
+      if (bv === null || bv === undefined) bv = -Infinity;
+      if (typeof av === "string") return av.localeCompare(bv) * sortDir;
+      return (av - bv) * sortDir;
+    });
+  }
+
+  const tbody = document.getElementById("bodyRows");
+  tbody.innerHTML = "";
+  rows.forEach(row => {
+    const tr = document.createElement("tr");
+    cols.forEach(col => {
+      const td = document.createElement("td");
+      td.setAttribute("data-label", col.label);
+      if (col.link) {
+        const url = PLAYER_URLS[normName(row[col.key])];
+        if (url) {
+          const a = document.createElement("a");
+          a.href = url; a.target = "_blank"; a.rel = "noopener";
+          a.textContent = fmt(row[col.key], col.fmt, col.dec);
+          a.style.color = "inherit"; a.style.textDecoration = "none";
+          a.addEventListener("mouseenter", () => a.style.textDecoration = "underline");
+          a.addEventListener("mouseleave", () => a.style.textDecoration = "none");
+          td.appendChild(a);
+        } else {
+          td.textContent = fmt(row[col.key], col.fmt, col.dec, col.shortTeam);
+        }
+      } else {
+        td.textContent = fmt(row[col.key], col.fmt, col.dec, col.shortTeam);
+      }
+      if (cols.indexOf(col) === 0) td.title = fmt(row[col.key], col.fmt, col.dec);
+      if (col.pct && row[col.pct] !== null && row[col.pct] !== undefined) {
+        const c = gradientColor(row[col.pct]);
+        td.style.background = c.bg;
+        td.style.color = c.text;
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function populateTeamFilter() {
+  const sel = document.getElementById("teamFilter");
+  sel.innerHTML = '<option value="">All Teams</option>';
+  const teams = new Set();
+  DATA[activeTab].forEach(r => {
+    const t = r.team || r.offense || r.defense;
+    if (t) teams.add(t);
+  });
+  [...teams].sort().forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t; opt.textContent = t;
+    sel.appendChild(opt);
+  });
+}
+
+function populateColumnPanel() {
+  const list = document.getElementById("colList");
+  list.innerHTML = "";
+  COLUMNS[activeTab].forEach(col => {
+    const label = document.createElement("label");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !hiddenCols[activeTab].has(col.key);
+    cb.addEventListener("change", () => {
+      if (cb.checked) hiddenCols[activeTab].delete(col.key); else hiddenCols[activeTab].add(col.key);
+      render();
+    });
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(" " + col.label));
+    list.appendChild(label);
+  });
+}
+
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeTab = btn.dataset.tab;
+    sortKey = null; sortDir = 1; teamFilter = ""; searchTerm = "";
+    document.getElementById("search").value = "";
+    if (activeTab === "glossary") {
+      document.getElementById("toolbar").style.display = "none";
+      document.getElementById("tableWrap").style.display = "none";
+      document.getElementById("glossaryWrap").style.display = "block";
+    } else {
+      document.getElementById("toolbar").style.display = "flex";
+      document.getElementById("tableWrap").style.display = "block";
+      document.getElementById("glossaryWrap").style.display = "none";
+      populateTeamFilter();
+      populateColumnPanel();
+      render();
+    }
+  });
+});
+
+document.getElementById("search").addEventListener("input", e => { searchTerm = e.target.value; render(); });
+document.getElementById("teamFilter").addEventListener("change", e => { teamFilter = e.target.value; render(); });
+document.getElementById("colToggleBtn").addEventListener("click", () => {
+  document.getElementById("colPanel").classList.toggle("open");
+});
+document.getElementById("showAllBtn").addEventListener("click", () => {
+  hiddenCols[activeTab].clear(); populateColumnPanel(); render();
+});
+document.getElementById("hideMostBtn").addEventListener("click", () => {
+  COLUMNS[activeTab].forEach((c, i) => { if (i > 2) hiddenCols[activeTab].add(c.key); });
+  populateColumnPanel(); render();
+});
+document.addEventListener("click", e => {
+  const panel = document.getElementById("colPanel");
+  const btn = document.getElementById("colToggleBtn");
+  if (!panel.contains(e.target) && e.target !== btn) panel.classList.remove("open");
+});
+
+// ---------- Dark mode ----------
+function applyTheme(dark) {
+  document.body.classList.toggle("dark", dark);
+  document.getElementById("themeToggle").textContent = dark ? "☀️" : "🌙";
+}
+const savedTheme = localStorage.getItem("nflfirstlook-theme");
+applyTheme(savedTheme === "dark");
+document.getElementById("themeToggle").addEventListener("click", () => {
+  const isDark = !document.body.classList.contains("dark");
+  applyTheme(isDark);
+  localStorage.setItem("nflfirstlook-theme", isDark ? "dark" : "light");
+});
+
+// ---------- Last updated ----------
+function showLastUpdated(iso) {
+  const el = document.getElementById("lastUpdated");
+  if (!iso) { el.textContent = ""; return; }
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) { el.textContent = ""; return; }
+  el.textContent = "Data as of " + d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+}
+
+let PLAYER_URLS = {};
+
+Promise.all([
+  fetch("data.json").then(r => r.json()),
+  fetch("players.json").then(r => r.json()).catch(() => ({}))
+])
+  .then(([json, players]) => {
+    DATA = json;
+    PLAYER_URLS = players;
+    showLastUpdated(DATA.lastUpdated);
+    Object.keys(COLUMNS).forEach(tab => computeAutoPercentiles(DATA[tab] || [], COLUMNS[tab]));
+    populateTeamFilter();
+    populateColumnPanel();
+    render();
+  })
+  .catch(err => {
+    document.getElementById("bodyRows").innerHTML =
+      '<tr><td colspan="20" style="padding:20px;text-align:center;color:#999;">Could not load data.json — if opening this file directly (file://), it needs to be served over http(s), e.g. via GitHub Pages.</td></tr>';
+    console.error(err);
+  });
+</script>
+</body>
+</html>
